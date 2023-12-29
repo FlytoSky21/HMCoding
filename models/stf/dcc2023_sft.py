@@ -18,6 +18,7 @@ from compressai.entropy_models import EntropyBottleneck, GaussianConditional
 from compressai.layers import GDN, MaskedConv2d
 # from models.yolov3_models import load_model
 from pytorchyolo import detect, my_models
+from models.stf.layers import SFTLayer
 
 
 def conv(in_channels, out_channels, kernel_size=5, stride=2):
@@ -95,7 +96,8 @@ class DCC2023Model(CompressionModel):
 
         self.modules0 = nn.Sequential()
         self.modules0.add_module("conv_0",
-                                 nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, stride=1, padding=1,bias=False))
+                                 nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, stride=1, padding=1,
+                                           bias=False))
         self.modules0.add_module(f"batch_norm_0", nn.BatchNorm2d(32, momentum=0.1, eps=1e-5))
         self.modules0.add_module(f"leaky_0", nn.LeakyReLU(0.1))
         load_pretrained_model(self.modules0, yolov3_front_pretrained, 14)
@@ -103,7 +105,8 @@ class DCC2023Model(CompressionModel):
 
         self.modules1 = nn.Sequential()
         self.modules1.add_module("conv_1",
-                                 nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=2, padding=1,bias=False))
+                                 nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=2, padding=1,
+                                           bias=False))
         self.modules1.add_module(f"batch_norm_1", nn.BatchNorm2d(64, momentum=0.1, eps=1e-5))
         self.modules1.add_module(f"leaky_1", nn.LeakyReLU(0.1))
         load_pretrained_model(self.modules1, yolov3_front_pretrained, 14)
@@ -111,7 +114,7 @@ class DCC2023Model(CompressionModel):
 
         self.modules2 = nn.Sequential()
         self.modules2.add_module("conv_2",
-                                 nn.Conv2d(in_channels=64, out_channels=32, kernel_size=1, stride=1,bias=False))
+                                 nn.Conv2d(in_channels=64, out_channels=32, kernel_size=1, stride=1, bias=False))
         self.modules2.add_module(f"batch_norm_2", nn.BatchNorm2d(32, momentum=0.1, eps=1e-5))
         self.modules2.add_module(f"leaky_2", nn.LeakyReLU(0.1))
         load_pretrained_model(self.modules2, yolov3_front_pretrained, 14)
@@ -119,7 +122,8 @@ class DCC2023Model(CompressionModel):
 
         self.modules3 = nn.Sequential()
         self.modules3.add_module("conv_3",
-                                 nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1,bias=False))
+                                 nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1,
+                                           bias=False))
         self.modules3.add_module(f"batch_norm_3", nn.BatchNorm2d(64, momentum=0.1, eps=1e-5))
         self.modules3.add_module(f"leaky_3", nn.LeakyReLU(0.1))
         load_pretrained_model(self.modules3, yolov3_front_pretrained, 14)
@@ -130,7 +134,8 @@ class DCC2023Model(CompressionModel):
 
         self.modules5 = nn.Sequential()
         self.modules5.add_module("conv_5",
-                                 nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=2, padding=1,bias=False))
+                                 nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=2, padding=1,
+                                           bias=False))
         self.modules5.add_module(f"batch_norm_5", nn.BatchNorm2d(128, momentum=0.1, eps=1e-5))
         self.modules5.add_module(f"leaky_5", nn.LeakyReLU(0.1))
         load_pretrained_model(self.modules5, yolov3_front_pretrained, 14)
@@ -138,7 +143,7 @@ class DCC2023Model(CompressionModel):
 
         self.modules6 = nn.Sequential()
         self.modules6.add_module("conv_6",
-                                 nn.Conv2d(in_channels=128, out_channels=64, kernel_size=1, stride=1,bias=False))
+                                 nn.Conv2d(in_channels=128, out_channels=64, kernel_size=1, stride=1, bias=False))
         self.modules6.add_module(f"batch_norm_6", nn.BatchNorm2d(64, momentum=0.1, eps=1e-5))
         self.modules6.add_module(f"leaky_6", nn.LeakyReLU(0.1))
         load_pretrained_model(self.modules6, yolov3_front_pretrained, 14)
@@ -146,7 +151,8 @@ class DCC2023Model(CompressionModel):
 
         self.modules7 = nn.Sequential()
         self.modules7.add_module("conv_7",
-                                 nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=1,bias=False))
+                                 nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=1,
+                                           bias=False))
         self.modules7.add_module(f"batch_norm_7", nn.BatchNorm2d(128, momentum=0.1, eps=1e-5))
         self.modules7.add_module(f"leaky_7", nn.LeakyReLU(0.1))
         load_pretrained_model(self.modules7, yolov3_front_pretrained, 14)
@@ -157,7 +163,7 @@ class DCC2023Model(CompressionModel):
 
         self.modules9 = nn.Sequential()
         self.modules9.add_module("conv_9",
-                                 nn.Conv2d(in_channels=128, out_channels=64, kernel_size=1, stride=1,bias=False))
+                                 nn.Conv2d(in_channels=128, out_channels=64, kernel_size=1, stride=1, bias=False))
         self.modules9.add_module(f"batch_norm_9", nn.BatchNorm2d(64, momentum=0.1, eps=1e-5))
         self.modules9.add_module(f"leaky_9", nn.LeakyReLU(0.1))
         load_pretrained_model(self.modules9, yolov3_front_pretrained, 14)
@@ -165,7 +171,8 @@ class DCC2023Model(CompressionModel):
 
         self.modules10 = nn.Sequential()
         self.modules10.add_module("conv_10",
-                                  nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=1,bias=False))
+                                  nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=1,
+                                            bias=False))
         self.modules10.add_module(f"batch_norm_10", nn.BatchNorm2d(128, momentum=0.1, eps=1e-5))
         self.modules10.add_module(f"leaky_10", nn.LeakyReLU(0.1))
         load_pretrained_model(self.modules10, yolov3_front_pretrained, 15)
@@ -176,11 +183,19 @@ class DCC2023Model(CompressionModel):
 
         self.modules12 = nn.Sequential()
         self.modules12.add_module("conv_12",
-                                  nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=2, padding=1,bias=False))
+                                  nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=2, padding=1,
+                                            bias=False))
         self.modules12.add_module(f"batch_norm_12", nn.BatchNorm2d(256, momentum=0.1, eps=1e-5))
         self.modules12.add_module(f"leaky_12", nn.LeakyReLU(0.1))
         load_pretrained_model(self.modules12, yolov3_front_pretrained, 15)
         freeze_para(self.modules12)
+
+        self.sft0 = SFTLayer(128, 192)
+        self.sft1 = SFTLayer(256, 192)
+        self.conv0 = conv(3, 64, 5, 2)
+        self.conv1 = conv(64, 128, 5, 2)
+
+        self.conv2 = conv(128, 256, 5, 2)
 
         self.gs_a = nn.Sequential(
             conv(Cs + 3, N, 5, 1),
@@ -230,6 +245,11 @@ class DCC2023Model(CompressionModel):
             GDN(N),
             conv(N, M2),
         )
+        self.gx_a0 = nn.Sequential(conv(3, N), GDN(N))
+        self.gx_a1 = nn.Sequential(conv(N, N), GDN(N))
+        self.gx_a2 = nn.Sequential(conv(N, N), GDN(N))
+        self.gx_a3 = nn.Sequential(conv(N, M2))
+
         self.hx_a = nn.Sequential(
             conv(M2, N, stride=1, kernel_size=3),
             nn.ReLU(inplace=True),
@@ -256,21 +276,21 @@ class DCC2023Model(CompressionModel):
     def forward(self, x, x_lr):
         # baselayer
         img_size = x.size(2)
-        f0 = self.modules0(x)
-        f1 = self.modules1(f0)
-        f2 = self.modules2(f1)
-        f3 = self.modules3(f2)
-        f4 = f3 + f1
-        f5 = self.modules5(f4)
-        f6 = self.modules6(f5)
-        f7 = self.modules7(f6)
-        f8 = f7 + f5
-        f9 = self.modules9(f8)
-        f10 = self.modules10(f9)
-        f11 = f10 + f8
-        f12 = self.modules12(f11)
+        f0 = self.modules0(x)  # 32*256*256
+        f1 = self.modules1(f0)  # 64*128*128
+        f2 = self.modules2(f1)  # 32*128*128
+        f3 = self.modules3(f2)  # 64*128*128
+        f4 = f3 + f1  # 64*128*128
+        f5 = self.modules5(f4)  # 128*64*64    **
+        f6 = self.modules6(f5)  # 64*64*64
+        f7 = self.modules7(f6)  # 128*64*64
+        f8 = f7 + f5  # 128*64*64
+        f9 = self.modules9(f8)  # 64*64*64
+        f10 = self.modules10(f9)  # 128*64*64
+        f11 = f10 + f8  # 128*64*64
+        s = self.modules12(f11)  # 256*32*32   **
 
-        s = self.yolov3_front(x)
+        # s = self.yolov3_front(x)
         f = torch.cat([s, x_lr], dim=1)
         y1 = self.gs_a(f)
         z1 = self.hs_a(torch.abs(y1))
@@ -281,7 +301,13 @@ class DCC2023Model(CompressionModel):
         t_hat = self.yolov3_back(s_hat, img_size)
 
         # enhance layer
-        y2 = self.gx_a(x)
+        # y2 = self.gx_a(x)
+        y_x_0 = self.gx_a0(x)  # 192*128*128
+        y_x_1 = self.gx_a1(y_x_0)  # 192*64*64
+        y_x_1_sft = self.sft0((y_x_1, f5))
+        y_x_2 = self.gx_a2(y_x_1_sft)  # 192*32*32
+        y_x_2_sft = self.sft1((y_x_2, s))
+        y2 = self.gx_a3(y_x_2_sft)  # 128*16*16
         z2 = self.hx_a(torch.abs(y2))
         z2_hat, z2_likelihoods = self.entropy_bottleneck(z2)
         scales_hat_z2 = self.hx_s(z2_hat)
