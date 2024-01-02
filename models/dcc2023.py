@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
 # @Time: 2023/11/19 18:02
 # @Author: TaoFei
-# @FileName: dcc2023.py
+# @FileName: dcc2023_sft.py
 # @Software: PyCharm
 
 from compressai.models import CompressionModel
@@ -76,7 +76,7 @@ class DCC2023Model(CompressionModel):
             param.requires_grad = False
 
         self.gs_a = nn.Sequential(
-            conv(Cs + 3, N, 5, 1),
+            conv(Cs+3, N, 5, 1),
             GDN(N),
             conv(N, N, 5, 1),
             GDN(N),

@@ -223,7 +223,7 @@ def run():
     print_environment_info()
     parser = argparse.ArgumentParser(description="Evaluate validation data.")
     parser.add_argument("-m", "--model", type=str, default="/home/adminroot/taofei/YOLO/Pytorch-YOLOv3/config/yolov3.cfg", help="Path to model definition file (.cfg)")
-    parser.add_argument("-w", "--weights", type=str, default="/home/adminroot/taofei/DCC2023fuxian/base_coco_fixbn/0.0483/checkpoint_best.pth.tar", help="Path to weights or checkpoint file (.weights or .pth)")
+    parser.add_argument("-w", "--weights", type=str, default="/home/adminroot/taofei/DCC2023fuxian/result/base_traing/vimeo_septuplet_frame4/dcc/ReduceLROnPlateau/0.013/checkpoint_best.pth.tar", help="Path to weights or checkpoint file (.weights or .pth)")
     parser.add_argument("-d", "--data", type=str, default="/home/adminroot/taofei/YOLO/Pytorch-YOLOv3/config/coco_dcc.data", help="Path to data config file (.data)")
     parser.add_argument("-b", "--batch_size", type=int, default=8, help="Size of each image batch")
     parser.add_argument("-v", "--verbose", action='store_true', help="Makes the validation more verbose")

@@ -19,6 +19,7 @@ from pytorchyolo.utils.datasets_dcc import ListDataset
 from pytorchyolo.utils.transforms import DEFAULT_TRANSFORMS
 from pytorchyolo.utils.parse_config import parse_data_config
 from models.dcc2023 import DCC2023Model
+# from models.stf.dcc2023_sft_dec import DCC2023Model
 # from models.dcc2023_base import DCC2023Model
 import math
 from pytorch_msssim import ms_ssim
@@ -247,7 +248,7 @@ def run():
                         default="/home/adminroot/taofei/YOLO/Pytorch-YOLOv3/config/yolov3.cfg",
                         help="Path to model definition file (.cfg)")
     parser.add_argument("-w", "--weights", type=str,
-                        default="/home/adminroot/taofei/DCC2023fuxian/result/joint_training/flicker/0.0483/checkpoint_400.pth.tar",
+                        default="/home/adminroot/taofei/DCC2023fuxian/result/joint_training/vimeo_septuplet_frame4/dcc/ReduceLROnPlateau/0.0130/checkpoint_latest.pth.tar",
                         help="Path to weights or checkpoint file (.weights or .pth)")
     parser.add_argument("-d", "--data", type=str,
                         default="/home/adminroot/taofei/YOLO/Pytorch-YOLOv3/config/coco_dcc.data",

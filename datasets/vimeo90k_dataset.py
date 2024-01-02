@@ -36,8 +36,10 @@ class Vimeo90KDataset(Dataset):
         for sequence in sequences:
             sequence_path = splitdir / sequence
             frames = sorted(sequence_path.glob("*.png"))
-            if len(frames) > 0:
-                self.samples.extend(frames)
+            # if len(frames) > 0:
+            #     self.samples.extend(frames)
+            if len(frames) >= 4:  # Ensure there are at least 4 frames in the sequence
+                self.samples.append(frames[3])
 
         self.transform = transform
 

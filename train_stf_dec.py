@@ -15,7 +15,6 @@ import torch.optim as optim
 
 from torch.utils.data import DataLoader
 from torchvision import transforms
-# from datasets.coco_dataset import Vimeo90KDataset
 from datasets.ImageNet300k import Vimeo90KDataset
 # from datasets.vimeo90k_dataset import Vimeo90KDataset
 
@@ -23,7 +22,7 @@ from compressai.datasets import ImageFolder
 from compressai.zoo import models
 from pytorch_msssim import ms_ssim
 
-from models.dcc2023_base import DCC2023Model
+from models.stf.dcc2023_sft_dec import DCC2023Model
 from torch.utils.tensorboard import SummaryWriter
 import os
 
@@ -72,7 +71,7 @@ def configure_optimizers(net, args):
     print("Number of yolov3 parameters:", len(yolov3_params))
 
     assert len(inter_params) == 0
-    assert len(union_params) == len(params_dict.keys()) - len(yolov3_params)
+    # assert len(union_params) == len(params_dict.keys()) - len(yolov3_params)
 
     optimizer = optim.Adam(
         (params_dict[n] for n in sorted(parameters)),
@@ -103,16 +102,15 @@ class RateDistortionLoss(nn.Module):
             (torch.log(likelihoods).sum() / (-math.log(2) * num_pixels))
             for likelihoods in output["base_likelihoods"].values()
         )
-        # out["enhance_bpp_loss"] = sum(
-        #     (torch.log(likelihoods).sum() / (-math.log(2) * num_pixels))
-        #     for likelihoods in output["enhance_likelihoods"].values()
-        # )
-        # out["bpp_loss"] = out["base_bpp_loss"] + out["enhance_bpp_loss"]
+        out["enhance_bpp_loss"] = sum(
+            (torch.log(likelihoods).sum() / (-math.log(2) * num_pixels))
+            for likelihoods in output["enhance_likelihoods"].values()
+        )
+        out["bpp_loss"] = out["base_bpp_loss"] + out["enhance_bpp_loss"]
         if self.type == 'mse':
-            # out["mse_loss"] = self.mse(output["x_hat"], target)
+            out["mse_loss"] = self.mse(output["x_hat"], target)
             out["smse_loss"] = self.mse(output["s_hat"], output["s"])
-            out["loss"] = self.lmbda * 255 ** 2 * (0.006 * out["smse_loss"]) + out["base_bpp_loss"]
-            # out["loss"] = self.lmbda * 255 ** 2 * (out["mse_loss"] + 0.006 * out["smse_loss"]) + out["bpp_loss"]
+            out["loss"] = self.lmbda * 255 ** 2 * (out["mse_loss"] + 0.006 * out["smse_loss"]) + out["bpp_loss"]
         else:
             out['ms_ssim_loss'] = compute_msssim(output["x_hat"], target)
             out["loss"] = self.lmbda * (1 - out['ms_ssim_loss']) + out["bpp_loss"]
@@ -150,10 +148,9 @@ def train_one_epoch(
     device = next(model.parameters()).device
     loss = AverageMeter()
 
-    for i, d in enumerate(train_dataloader):
-
-        img = d[0].to(device)
-        img_lr = d[1].to(device)
+    for i, (img, img_lr) in enumerate(train_dataloader):
+        img = img.to(device)
+        img_lr = img_lr.to(device)
         optimizer.zero_grad()
         aux_optimizer.zero_grad()
 
@@ -178,9 +175,9 @@ def train_one_epoch(
                     f"{i * len(img)}/{len(train_dataloader.dataset)}"
                     f" ({100. * i / len(train_dataloader):.0f}%)]"
                     f'\tLoss: {out_criterion["loss"].item():.3f} |'
-                    # f'\tMSE loss: {out_criterion["mse_loss"].item():.3f} |'
+                    f'\tMSE loss: {out_criterion["mse_loss"].item():.3f} |'
                     f'\tsMSE loss: {out_criterion["smse_loss"].item():.3f} |'
-                    f'\tBpp loss: {out_criterion["base_bpp_loss"].item():.2f} |'
+                    f'\tBpp loss: {out_criterion["bpp_loss"].item():.2f} |'
                     f"\tAux loss: {aux_loss.item():.2f}"
                 )
             else:
@@ -190,7 +187,7 @@ def train_one_epoch(
                     f" ({100. * i / len(train_dataloader):.0f}%)]"
                     f'\tLoss: {out_criterion["loss"].item():.3f} |'
                     f'\tMS_SSIM loss: {out_criterion["ms_ssim_loss"].item():.3f} |'
-                    f'\tBpp loss: {out_criterion["base_bpp_loss"].item():.2f} |'
+                    f'\tBpp loss: {out_criterion["bpp_loss"].item():.2f} |'
                     f"\tAux loss: {aux_loss.item():.2f}"
                 )
     return loss.avg
@@ -201,7 +198,8 @@ def test_epoch(epoch, test_dataloader, model, criterion, type='mse'):
     device = next(model.parameters()).device
     if type == 'mse':
         loss = AverageMeter()
-        base_bpp_loss = AverageMeter()
+        bpp_loss = AverageMeter()
+        mse_loss = AverageMeter()
         smse_loss = AverageMeter()
         aux_loss = AverageMeter()
 
@@ -214,15 +212,17 @@ def test_epoch(epoch, test_dataloader, model, criterion, type='mse'):
                 out_criterion = criterion(out_net, img)
 
                 aux_loss.update(model.aux_loss())
-                base_bpp_loss.update(out_criterion["base_bpp_loss"])
+                bpp_loss.update(out_criterion["bpp_loss"])
                 loss.update(out_criterion["loss"])
+                mse_loss.update(out_criterion["mse_loss"])
                 smse_loss.update(out_criterion["smse_loss"])
 
         print(
             f"Test epoch {epoch}: Average losses:"
             f"\tLoss: {loss.avg:.3f} |"
+            f"\tMSE loss: {mse_loss.avg:.3f} |"
             f"\tsMSE loss: {smse_loss.avg:.3f} |"
-            f"\tBpp loss: {base_bpp_loss.avg:.2f} |"
+            f"\tBpp loss: {bpp_loss.avg:.2f} |"
             f"\tAux loss: {aux_loss.avg:.2f}\n"
         )
 
@@ -256,13 +256,6 @@ def test_epoch(epoch, test_dataloader, model, criterion, type='mse'):
 
 def parse_args(argv):
     parser = argparse.ArgumentParser(description="Example training script.")
-    parser.add_argument(
-        "-m",
-        "--model",
-        default="bmshj2018-factorized",
-        choices=models.keys(),
-        help="Model architecture (default: %(default)s)",
-    )
     parser.add_argument(
         "-d", "--dataset", type=str, required=True, help="Training dataset"
     )
@@ -381,7 +374,7 @@ def main(argv):
     test_dataset = Vimeo90KDataset(args.dataset, split="test", transform=test_transforms)
 
     device = "cuda" if args.cuda and torch.cuda.is_available() else "cpu"
-    print(f'test device is {device}')
+    print(f'train device is {device}')
 
     train_dataloader = DataLoader(
         train_dataset,
@@ -403,14 +396,8 @@ def main(argv):
     # for layer in net.children():
     #     print((layer))
     net = net.to(device)
-
-    # if args.cuda and torch.cuda.device_count() > 1:
-    #     net = CustomDataParallel(net)
-
     optimizer, aux_optimizer = configure_optimizers(net, args)
-    # milestones = args.lr_epoch
-    # print("milestones: ", milestones)
-    # lr_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[300, 350], gamma=0.1, last_epoch=-1)
+    # lr_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[300, 350], gamma=0.1)
     # 创建一个学习了调度器，该调度器根据优化过程中监测的某个指标的变化来自动调整学习率。
     # 在这里，指定的指标是最小化的，当这个指标不再减小时，学习率会被调整。
     lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, "min", factor=0.1, patience=10)
@@ -430,7 +417,7 @@ def main(argv):
     best_loss = float("inf")
     for epoch in range(last_epoch, args.epochs):
         print(f"Learning rate: {optimizer.param_groups[0]['lr']}")
-        train_loss=train_one_epoch(
+        train_loss = train_one_epoch(
             net,
             criterion,
             train_dataloader,
@@ -464,9 +451,6 @@ def main(argv):
                 epoch,
                 save_path,
             )
-        # 如果学习率已经降低了4次，就停止训练
-        # if optimizer.param_groups[0]['lr'] <= 1e-4 * (0.1 ** 4):
-        #     break
     writer.close()
 
 

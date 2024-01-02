@@ -7,7 +7,7 @@
 import os
 from PIL import Image
 
-path = "/home/adminroot/taofei/dataset/COCO2017/train2017"  # 将此路径替换为您要统计的文件夹的路径
+path = "/home/adminroot/taofei/dataset/COCO2014/train2014"  # 将此路径替换为您要统计的文件夹的路径
 
 for filename in os.listdir(path):
     if filename.endswith(".jpg") or filename.endswith(".png"):

@@ -179,8 +179,8 @@ def _evaluate(model, dataloader, class_names, img_size, iou_thres, conf_thres, n
             outputs = outputs_net['t_hat']
             outputs = non_max_suppression(outputs, conf_thres=conf_thres, iou_thres=nms_thres)
             count += 1
-            base_bpp_tmp = compute_bpp(outputs_net)
-            base_bpp += base_bpp_tmp
+            # base_bpp_tmp = compute_bpp(outputs_net)
+            # base_bpp += base_bpp_tmp
 
             # ssim_t+=compute_msssim(imgs, outputs_net["x_hat"])
             # psnr_t += compute_psnr(imgs, outputs_net["x_hat"])
@@ -188,12 +188,12 @@ def _evaluate(model, dataloader, class_names, img_size, iou_thres, conf_thres, n
         sample_metrics += get_batch_statistics(outputs, targets, iou_threshold=iou_thres)
     # PSNR = psnr_t / count
     # MS_SSIM = ssim_t / count
-    base_bpp = base_bpp / count
+    # base_bpp = base_bpp / count
     # total_bpp = total_bpp / count
     # print(f'average_PSNR: {PSNR:.2f}dB')
     # print(f'average_MS-SSIM: {MS_SSIM:.4f}')
     # print(f'average_Bit-rate: {total_bpp:.3f} bpp')
-    print(f'average_base_bpp: {base_bpp:.3f} ')
+    # print(f'average_base_bpp: {base_bpp:.3f} ')
 
     if len(sample_metrics) == 0:  # No detections over whole validation set.
         print("---- No detections over whole validation set ----")
@@ -243,7 +243,7 @@ def run():
                         default="/home/adminroot/taofei/YOLO/Pytorch-YOLOv3/config/yolov3.cfg",
                         help="Path to model definition file (.cfg)")
     parser.add_argument("-w", "--weights", type=str,
-                        default="/home/adminroot/taofei/DCC2023fuxian/base_viemo_fixbn/0.0483checkpoint_best.pth.tar",
+                        default="/home/adminroot/taofei/DCC2023fuxian/result/base_traing/vimeo_septuplet_frame4/dcc/ReduceLROnPlateau/0.013/checkpoint_latest.pth.tar",
                         help="Path to weights or checkpoint file (.weights or .pth)")
     parser.add_argument("-d", "--data", type=str,
                         default="/home/adminroot/taofei/YOLO/Pytorch-YOLOv3/config/coco_dcc.data",

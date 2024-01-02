@@ -15,7 +15,7 @@ import torch.optim as optim
 
 from torch.utils.data import DataLoader
 from torchvision import transforms
-# from datasets.coco_dataset import Vimeo90KDataset
+# from datasets.ImageNet300k import Vimeo90KDataset
 from datasets.vimeo90k_dataset import Vimeo90KDataset
 
 from compressai.datasets import ImageFolder
@@ -71,7 +71,7 @@ def configure_optimizers(net, args):
     print("Number of yolov3 parameters:", len(yolov3_params))
 
     assert len(inter_params) == 0
-    assert len(union_params) == len(params_dict.keys()) - len(yolov3_params)
+    # assert len(union_params) == len(params_dict.keys()) - len(yolov3_params)
 
     optimizer = optim.Adam(
         (params_dict[n] for n in sorted(parameters)),
@@ -133,6 +133,7 @@ class AverageMeter:
         self.count += n
         self.avg = self.sum / self.count
 
+
 def fix_bn(m):
     classname = m.__class__.__name__
     if classname.find('BatchNorm') != -1:
@@ -146,7 +147,6 @@ def train_one_epoch(
     model.apply(fix_bn)
     device = next(model.parameters()).device
     loss = AverageMeter()
-    # iterations = len(train_dataloader)
 
     for i, (img, img_lr) in enumerate(train_dataloader):
         img = img.to(device)
@@ -180,16 +180,6 @@ def train_one_epoch(
                     f'\tBpp loss: {out_criterion["bpp_loss"].item():.2f} |'
                     f"\tAux loss: {aux_loss.item():.2f}"
                 )
-                # average_loss = total_loss / i
-                # global_step = (epoch - 1) * iterations + i
-                # writer.add_scalar("Training Loss", average_loss, global_step)
-                # 每隔一定步数记录一下损失
-                writer.add_scalar("train/loss", out_criterion["loss"], epoch * len(train_dataloader) + i)
-                writer.add_scalar("train/mse_loss", out_criterion["mse_loss"], epoch * len(train_dataloader) + i)
-                writer.add_scalar("train/smse_loss", out_criterion["smse_loss"],
-                                  epoch * len(train_dataloader) + i)
-                writer.add_scalar("train/bpp_loss", out_criterion["bpp_loss"], epoch * len(train_dataloader) + i)
-                writer.add_scalar("train/aux_loss", aux_loss, epoch * len(train_dataloader) + i)
             else:
                 print(
                     f"Train epoch {epoch}: ["
@@ -200,8 +190,7 @@ def train_one_epoch(
                     f'\tBpp loss: {out_criterion["bpp_loss"].item():.2f} |'
                     f"\tAux loss: {aux_loss.item():.2f}"
                 )
-    # 记录平均总体训练损失
-    writer.add_scalar("train/avg_loss", loss.avg, epoch)
+    return loss.avg
 
 
 def test_epoch(epoch, test_dataloader, model, criterion, type='mse'):
@@ -273,7 +262,7 @@ def parse_args(argv):
     parser.add_argument(
         "-e",
         "--epochs",
-        default=300,
+        default=400,
         type=int,
         help="Number of epochs (default: %(default)s)",
     )
@@ -295,7 +284,7 @@ def parse_args(argv):
         "--lambda",
         dest="lmbda",
         type=float,
-        default=0.0483,
+        default=0.0130,
         help="Bit-rate distortion parameter (default: %(default)s)",
     )
     parser.add_argument(
@@ -353,7 +342,7 @@ def parse_args(argv):
 
 def save_checkpoint(state, is_best, epoch, save_path):
     torch.save(state, save_path + "/checkpoint_latest.pth.tar")
-    if epoch % 5 == 0:
+    if epoch % 100 == 0:
         torch.save(state, save_path + "/checkpoint_" + str(epoch) + ".pth.tar")
     if is_best:
         torch.save(state, save_path + "/checkpoint_best.pth.tar")
@@ -407,14 +396,8 @@ def main(argv):
     # for layer in net.children():
     #     print((layer))
     net = net.to(device)
-
-    # if args.cuda and torch.cuda.device_count() > 1:
-    #     net = CustomDataParallel(net)
-
     optimizer, aux_optimizer = configure_optimizers(net, args)
-    # milestones = args.lr_epoch
-    # print("milestones: ", milestones)
-    # lr_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones, gamma=0.1, last_epoch=-1)
+    # lr_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[300, 350], gamma=0.1)
     # 创建一个学习了调度器，该调度器根据优化过程中监测的某个指标的变化来自动调整学习率。
     # 在这里，指定的指标是最小化的，当这个指标不再减小时，学习率会被调整。
     lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, "min", factor=0.1, patience=10)
@@ -434,7 +417,7 @@ def main(argv):
     best_loss = float("inf")
     for epoch in range(last_epoch, args.epochs):
         print(f"Learning rate: {optimizer.param_groups[0]['lr']}")
-        train_one_epoch(
+        train_loss = train_one_epoch(
             net,
             criterion,
             train_dataloader,
@@ -445,6 +428,8 @@ def main(argv):
             writer,
             type
         )
+        writer.add_scalar('learning_rate', optimizer.param_groups[0]['lr'], epoch)
+        writer.add_scalar('train_loss', train_loss, epoch)
         loss = test_epoch(epoch, test_dataloader, net, criterion, type)
         writer.add_scalar('test_loss', loss, epoch)
         lr_scheduler.step(loss)
@@ -466,9 +451,6 @@ def main(argv):
                 epoch,
                 save_path,
             )
-        # 如果学习率已经降低了4次，就停止训练
-        if optimizer.param_groups[0]['lr'] <= 1e-4 * (0.1 ** 4):
-            break
     writer.close()
 
 
