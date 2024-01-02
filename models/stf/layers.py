@@ -15,3 +15,17 @@ class SFTLayer(nn.Module):
         scale = self.SFT_scale_conv1(F.leaky_relu(self.SFT_scale_conv0(x[1]), 0.1, inplace=True))
         shift = self.SFT_shift_conv1(F.leaky_relu(self.SFT_shift_conv0(x[1]), 0.1, inplace=True))
         return x[0] * (scale + 1) + shift
+
+
+class SFTLayerNoBias(nn.Module):
+    def __init__(self, in_ch, out_ch):
+        super(SFTLayer, self).__init__()
+        self.SFT_scale_conv0 = nn.Conv2d(in_ch, in_ch, 1)
+        self.SFT_scale_conv1 = nn.Conv2d(in_ch, out_ch, 1)
+        self.SFT_shift_conv0 = nn.Conv2d(in_ch, in_ch, 1)
+        self.SFT_shift_conv1 = nn.Conv2d(in_ch, out_ch, 1)
+
+    def forward(self, x):
+        # x[0]: fea; x[1]: cond
+        scale = self.SFT_scale_conv1(F.leaky_relu(self.SFT_scale_conv0(x[1]), 0.1, inplace=True))
+        return x[0] * (scale + 1)
