@@ -309,7 +309,7 @@ class DCC2023Model(CompressionModel):
         scales_hat_z1 = self.hs_s(z1_hat)
         y1_hat, y1_likelihoods = self.gaussian_conditional(y1, scales_hat_z1)
         s_hat = self.gs_s(y1_hat)
-        t_hat = self.yolov3_back(s_hat, img_size)
+        # t_hat = self.yolov3_back(s_hat, img_size)
 
         # enhance layer
         # y2 = self.gx_a(x)
@@ -334,5 +334,5 @@ class DCC2023Model(CompressionModel):
             "enhance_likelihoods": {"y2": y2_likelihoods, "z2": z2_likelihoods},
             "s": s,
             "s_hat": s_hat,
-            "t_hat": t_hat,
+            # "t_hat": t_hat,
         }

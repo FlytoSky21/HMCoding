@@ -18,7 +18,7 @@ from compressai.entropy_models import EntropyBottleneck, GaussianConditional
 from compressai.layers import GDN, MaskedConv2d
 # from models.yolov3_models import load_model
 from pytorchyolo import detect, my_models
-from models.stf.layers import SFTLayer
+from models.stf.layers import SFTLayer,SFTLayerNoBias
 
 
 def conv(in_channels, out_channels, kernel_size=5, stride=2):
@@ -190,8 +190,8 @@ class DCC2023Model(CompressionModel):
         load_pretrained_model(self.modules12, yolov3_front_pretrained, 15)
         freeze_para(self.modules12)
 
-        self.sft0 = SFTLayer(128, 192)
-        self.sft1 = SFTLayer(256, 192)
+        self.sft0 = SFTLayerNoBias(128, 192)
+        self.sft1 = SFTLayerNoBias(256, 192)
         self.conv0 = conv(3, 64, 5, 2)
         self.conv1 = conv(64, 128, 5, 2)
 

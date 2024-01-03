@@ -19,7 +19,7 @@ class SFTLayer(nn.Module):
 
 class SFTLayerNoBias(nn.Module):
     def __init__(self, in_ch, out_ch):
-        super(SFTLayer, self).__init__()
+        super(SFTLayerNoBias, self).__init__()
         self.SFT_scale_conv0 = nn.Conv2d(in_ch, in_ch, 1)
         self.SFT_scale_conv1 = nn.Conv2d(in_ch, out_ch, 1)
         self.SFT_shift_conv0 = nn.Conv2d(in_ch, in_ch, 1)
