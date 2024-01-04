@@ -257,7 +257,8 @@ def test_epoch(epoch, test_dataloader, model, criterion, type='mse'):
 def parse_args(argv):
     parser = argparse.ArgumentParser(description="Example training script.")
     parser.add_argument(
-        "-d", "--dataset", type=str, required=True, help="Training dataset"
+        "-d", "--dataset", type=str, default="/home/adminroot/taofei/dataset/flicker",
+        help="Training dataset"
     )
     parser.add_argument(
         "-e",
@@ -323,7 +324,9 @@ def parse_args(argv):
     )
     parser.add_argument("--checkpoint", type=str, help="Path to a checkpoint")
     parser.add_argument("--type", type=str, default='mse', help="loss type", choices=['mse', "ms-ssim"])
-    parser.add_argument("--save_path", type=str, help="save_path")
+    parser.add_argument("--save_path",
+                        default="/home/adminroot/taofei/DCC2023fuxian/result/joint_training/flicker/ReduceLROnPlateau/stf_encNoBias_dec_4conv",
+                        type=str, help="save_path")
     parser.add_argument(
         "--skip_epoch", type=int, default=0
     )

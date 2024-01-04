@@ -13,20 +13,25 @@ from torch.utils.data import DataLoader
 from torch.autograd import Variable
 
 from pytorchyolo.models import load_model
-from pytorchyolo.utils.utils import load_classes, ap_per_class, get_batch_statistics, non_max_suppression, to_cpu, xywh2xyxy, print_environment_info
+from pytorchyolo.utils.utils import load_classes, ap_per_class, get_batch_statistics, non_max_suppression, to_cpu, \
+    xywh2xyxy, print_environment_info
 from pytorchyolo.utils.datasets_dcc import ListDataset
 from pytorchyolo.utils.transforms import DEFAULT_TRANSFORMS
 from pytorchyolo.utils.parse_config import parse_data_config
-from models.dcc2023_base import DCC2023Model
+# from models.dcc2023_base import DCC2023Model
+from models.stf.dcc2023_sft_base import DCC2023Model
 import math
 from pytorch_msssim import ms_ssim
+from pytorchyolo import detect, my_models
+import re
+
 
 def compute_bpp(out_net):
     # size = out_net['x_hat'].size()
     # num_pixels = size[0] * size[2] * size[3]
-    num_pixels=out_net['s_hat'].size(0)*512*512
+    num_pixels = out_net['s_hat'].size(0) * 512 * 512
 
-    base_bpp= sum(
+    base_bpp = sum(
         (torch.log(likelihoods).sum() / (-math.log(2) * num_pixels))
         for likelihoods in out_net["base_likelihoods"].values()
     )
@@ -35,9 +40,10 @@ def compute_bpp(out_net):
     #     for likelihoods in out_net["enhance_likelihoods"].values()
     # )
     # total_bpp = (base_bpp + enhance_bpp).item()
-    return base_bpp  #,total_bpp
+    return base_bpp  # ,total_bpp
     # return sum(torch.log(likelihoods).sum() / (-math.log(2) * num_pixels)
     #            for likelihoods in out_net['likelihoods'].values()).item()
+
 
 def compute_psnr(a, b):
     mse = torch.mean((a - b) ** 2).item()
@@ -47,6 +53,7 @@ def compute_psnr(a, b):
 def compute_msssim(a, b):
     # return -10 * math.log10(1 - ms_ssim(a, b, data_range=1.).item())
     return ms_ssim(a, b, data_range=1.)
+
 
 def evaluate_model_file(model_path, weights_path, img_path, class_names, batch_size=8, img_size=416,
                         n_cpu=8, iou_thres=0.5, conf_thres=0.5, nms_thres=0.5, verbose=True):
@@ -80,7 +87,7 @@ def evaluate_model_file(model_path, weights_path, img_path, class_names, batch_s
         img_path, batch_size, img_size, n_cpu)
 
     model = DCC2023Model()
-    model_dict=model.state_dict()
+    model_dict = model.state_dict()
 
     checkpoint = torch.load(weights_path, map_location='cuda')
     print(f'test_epoch is {checkpoint["epoch"]}')
@@ -137,17 +144,32 @@ def _evaluate(model, dataloader, class_names, img_size, iou_thres, conf_thres, n
     :return: Returns precision, recall, AP, f1, ap_class
     """
     model.eval()  # Set model to evaluation mode
+    yolov3 = my_models.load_model("/home/adminroot/taofei/DCC2023fuxian/config/yolov3.cfg",
+                                  "/home/adminroot/taofei/DCC2023fuxian/config/yolov3.weights")
+    yolov3_back = my_models.load_back_model("/home/adminroot/taofei/DCC2023fuxian/config/yolov3_back.cfg")
+    yolov3_back_dict = yolov3_back.state_dict()
+    new_yolov3_back_dict = {}
+    yolov3_dict = yolov3.state_dict()
+    for k, v in yolov3_dict.items():
+        # 将键中的数字-13
+        k = re.sub(r'(\d+)', lambda x: str(int(x.group(1)) - 13), k)
+        if k in yolov3_back_dict:
+            new_yolov3_back_dict[k] = v
+
+    yolov3_back_dict.update(new_yolov3_back_dict)
+    yolov3_back.load_state_dict(yolov3_back_dict)
+    yolov3_back.eval()
 
     Tensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
 
     labels = []
     count = 0
     # total_bpp=0
-    base_bpp=0
+    base_bpp = 0
     # ssim_t=0
     # psnr_t=0
     sample_metrics = []  # List of tuples (TP, confs, pred)
-    for _, imgs,imgs_lr, targets in tqdm.tqdm(dataloader, desc="Validating"):
+    for _, imgs, imgs_lr, targets in tqdm.tqdm(dataloader, desc="Validating"):
         # Extract labels
         labels += targets[:, 1].tolist()
         # Rescale target
@@ -158,12 +180,12 @@ def _evaluate(model, dataloader, class_names, img_size, iou_thres, conf_thres, n
         imgs_lr = Variable(imgs_lr.type(Tensor), requires_grad=False)
 
         with torch.no_grad():
-            outputs_net = model(imgs,imgs_lr)
-            outputs=outputs_net['t_hat']
+            outputs_net = model(imgs, imgs_lr)
+            outputs = yolov3_back(outputs_net['s_hat'], 512)
             outputs = non_max_suppression(outputs, conf_thres=conf_thres, iou_thres=nms_thres)
-            count+=1
-            base_bpp_tmp=compute_bpp(outputs_net)
-            base_bpp+=base_bpp_tmp
+            count += 1
+            base_bpp_tmp = compute_bpp(outputs_net)
+            base_bpp += base_bpp_tmp
 
             # ssim_t+=compute_msssim(imgs, outputs_net["x_hat"])
             # psnr_t += compute_psnr(imgs, outputs_net["x_hat"])
@@ -222,9 +244,15 @@ def _create_validation_data_loader(img_path, batch_size, img_size, n_cpu):
 def run():
     print_environment_info()
     parser = argparse.ArgumentParser(description="Evaluate validation data.")
-    parser.add_argument("-m", "--model", type=str, default="/home/adminroot/taofei/YOLO/Pytorch-YOLOv3/config/yolov3.cfg", help="Path to model definition file (.cfg)")
-    parser.add_argument("-w", "--weights", type=str, default="/home/adminroot/taofei/DCC2023fuxian/result/base_traing/vimeo_septuplet_frame4/dcc/ReduceLROnPlateau/0.013/checkpoint_best.pth.tar", help="Path to weights or checkpoint file (.weights or .pth)")
-    parser.add_argument("-d", "--data", type=str, default="/home/adminroot/taofei/YOLO/Pytorch-YOLOv3/config/coco_dcc.data", help="Path to data config file (.data)")
+    parser.add_argument("-m", "--model", type=str,
+                        default="/home/adminroot/taofei/YOLO/Pytorch-YOLOv3/config/yolov3.cfg",
+                        help="Path to model definition file (.cfg)")
+    parser.add_argument("-w", "--weights", type=str,
+                        default="/home/adminroot/taofei/DCC2023fuxian/result/base_traing/flicker/ReduceLROnPlateau/0.013/checkpoint_latest.pth.tar",
+                        help="Path to weights or checkpoint file (.weights or .pth)")
+    parser.add_argument("-d", "--data", type=str,
+                        default="/home/adminroot/taofei/YOLO/Pytorch-YOLOv3/config/coco_dcc.data",
+                        help="Path to data config file (.data)")
     parser.add_argument("-b", "--batch_size", type=int, default=8, help="Size of each image batch")
     parser.add_argument("-v", "--verbose", action='store_true', help="Makes the validation more verbose")
     parser.add_argument("--img_size", type=int, default=512, help="Size of each image dimension for yolo")

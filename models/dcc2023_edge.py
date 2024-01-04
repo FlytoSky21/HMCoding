@@ -76,7 +76,7 @@ class DCC2023Model(CompressionModel):
             param.requires_grad = False
 
         self.gs_a = nn.Sequential(
-            conv(Cs, N, 5, 1),
+            conv(Cs + 4, N, 5, 1),
             GDN(N),
             conv(N, N, 5, 1),
             GDN(N),
@@ -146,18 +146,18 @@ class DCC2023Model(CompressionModel):
         self.M2 = M2
         self.M = M
 
-    def forward(self, x, x_lr):
+    def forward(self, x, x_lr, x_lr_edge):
         # baselayer
         img_size = x.size(2)
         s = self.yolov3_front(x)
-        # f = torch.cat([s, x_lr], dim=1)
-        y1 = self.gs_a(s)
+        f = torch.cat([s, x_lr, x_lr_edge], dim=1)
+        y1 = self.gs_a(f)
         z1 = self.hs_a(torch.abs(y1))
         z1_hat, z1_likelihoods = self.entropy_bottleneck(z1)
         scales_hat_z1 = self.hs_s(z1_hat)
         y1_hat, y1_likelihoods = self.gaussian_conditional(y1, scales_hat_z1)
         s_hat = self.gs_s(y1_hat)
-        t_hat = self.yolov3_back(s_hat, img_size)
+        # t_hat = self.yolov3_back(s_hat, img_size)
 
         # enhance layer
         y2 = self.gx_a(x)
@@ -173,5 +173,5 @@ class DCC2023Model(CompressionModel):
             "enhance_likelihoods": {"y2": y2_likelihoods, "z2": z2_likelihoods},
             "s": s,
             "s_hat": s_hat,
-            "t_hat": t_hat,
+            #"t_hat": t_hat,
         }

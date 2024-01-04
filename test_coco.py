@@ -19,10 +19,13 @@ from pytorchyolo.utils.datasets_dcc import ListDataset
 from pytorchyolo.utils.transforms import DEFAULT_TRANSFORMS
 from pytorchyolo.utils.parse_config import parse_data_config
 from models.dcc2023 import DCC2023Model
+# from models.stf.dcc2023_sft_encNoBias_dec import DCC2023Model
 # from models.stf.dcc2023_sft_dec import DCC2023Model
 # from models.dcc2023_base import DCC2023Model
 import math
 from pytorch_msssim import ms_ssim
+from pytorchyolo import detect, my_models
+import re
 
 
 def compute_bpp(out_net):
@@ -155,6 +158,22 @@ def _evaluate(model, dataloader, class_names, img_size, iou_thres, conf_thres, n
     """
     model.eval()  # Set model to evaluation mode
 
+    yolov3 = my_models.load_model("/home/adminroot/taofei/DCC2023fuxian/config/yolov3.cfg",
+                                  "/home/adminroot/taofei/DCC2023fuxian/config/yolov3.weights")
+    yolov3_back = my_models.load_back_model("/home/adminroot/taofei/DCC2023fuxian/config/yolov3_back.cfg")
+    yolov3_back_dict = yolov3_back.state_dict()
+    new_yolov3_back_dict = {}
+    yolov3_dict = yolov3.state_dict()
+    for k, v in yolov3_dict.items():
+        # 将键中的数字-13
+        k = re.sub(r'(\d+)', lambda x: str(int(x.group(1)) - 13), k)
+        if k in yolov3_back_dict:
+            new_yolov3_back_dict[k] = v
+
+    yolov3_back_dict.update(new_yolov3_back_dict)
+    yolov3_back.load_state_dict(yolov3_back_dict)
+    yolov3_back.eval()
+
     Tensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
 
     labels = []
@@ -178,6 +197,7 @@ def _evaluate(model, dataloader, class_names, img_size, iou_thres, conf_thres, n
         with torch.no_grad():
             outputs_net = model(imgs, imgs_lr)
             outputs = outputs_net['t_hat']
+            # outputs = yolov3_back(outputs_net['s_hat'],512)
             outputs = non_max_suppression(outputs, conf_thres=conf_thres, iou_thres=nms_thres)
             count += 1
             base_bpp_tmp, enhance_bpp_tmp, total_bpp_tmp = compute_bpp(outputs_net)
@@ -248,7 +268,7 @@ def run():
                         default="/home/adminroot/taofei/YOLO/Pytorch-YOLOv3/config/yolov3.cfg",
                         help="Path to model definition file (.cfg)")
     parser.add_argument("-w", "--weights", type=str,
-                        default="/home/adminroot/taofei/DCC2023fuxian/result/joint_training/vimeo_septuplet_frame4/dcc/ReduceLROnPlateau/0.0130/checkpoint_latest.pth.tar",
+                        default="/home/adminroot/taofei/DCC2023fuxian/result/joint_training/flicker/ReduceLROnPlateau/no_resize_joint/0.0067/checkpoint_latest.pth.tar",
                         help="Path to weights or checkpoint file (.weights or .pth)")
     parser.add_argument("-d", "--data", type=str,
                         default="/home/adminroot/taofei/YOLO/Pytorch-YOLOv3/config/coco_dcc.data",

@@ -15,14 +15,16 @@ import torch.optim as optim
 
 from torch.utils.data import DataLoader
 from torchvision import transforms
-from datasets.ImageNet300k import Vimeo90KDataset
+from datasets.coco14_edge_dataset import Vimeo90KDataset
+# from datasets.ImageNet300k import Vimeo90KDataset
 # from datasets.vimeo90k_dataset import Vimeo90KDataset
 
 from compressai.datasets import ImageFolder
 from compressai.zoo import models
 from pytorch_msssim import ms_ssim
 
-from models.stf.dcc2023_sft_encNoBias_dec import DCC2023Model
+# from models.stf.dcc2023_sft_encNoBias_dec_edge import DCC2023Model
+from models.dcc2023_edge import DCC2023Model
 from torch.utils.tensorboard import SummaryWriter
 import os
 
@@ -148,13 +150,14 @@ def train_one_epoch(
     device = next(model.parameters()).device
     loss = AverageMeter()
 
-    for i, (img, img_lr) in enumerate(train_dataloader):
+    for i, (img, img_lr, img_lr_edge) in enumerate(train_dataloader):
         img = img.to(device)
         img_lr = img_lr.to(device)
+        img_lr_edge = img_lr_edge.to(device)
         optimizer.zero_grad()
         aux_optimizer.zero_grad()
 
-        out_net = model(img, img_lr)
+        out_net = model(img, img_lr, img_lr_edge)
 
         out_criterion = criterion(out_net, img)
         out_criterion["loss"].backward()
@@ -207,8 +210,9 @@ def test_epoch(epoch, test_dataloader, model, criterion, type='mse'):
             for d in test_dataloader:
                 img = d[0].to(device)
                 img_lr = d[1].to(device)
+                img_lr_edge = d[2].to(device)
                 # d = d.to(device)
-                out_net = model(img, img_lr)
+                out_net = model(img, img_lr, img_lr_edge)
                 out_criterion = criterion(out_net, img)
 
                 aux_loss.update(model.aux_loss())
@@ -257,7 +261,8 @@ def test_epoch(epoch, test_dataloader, model, criterion, type='mse'):
 def parse_args(argv):
     parser = argparse.ArgumentParser(description="Example training script.")
     parser.add_argument(
-        "-d", "--dataset", type=str, required=True, help="Training dataset"
+        "-d", "--dataset", type=str, default="/home/adminroot/taofei/dataset/flicker",
+        help="Training dataset"
     )
     parser.add_argument(
         "-e",
@@ -323,7 +328,9 @@ def parse_args(argv):
     )
     parser.add_argument("--checkpoint", type=str, help="Path to a checkpoint")
     parser.add_argument("--type", type=str, default='mse', help="loss type", choices=['mse', "ms-ssim"])
-    parser.add_argument("--save_path", type=str, help="save_path")
+    parser.add_argument("--save_path",
+                        default="/home/adminroot/taofei/DCC2023fuxian/result/joint_training/flicker/ReduceLROnPlateau/stf_encNoBias_dec_4conv",
+                        type=str, help="save_path")
     parser.add_argument(
         "--skip_epoch", type=int, default=0
     )

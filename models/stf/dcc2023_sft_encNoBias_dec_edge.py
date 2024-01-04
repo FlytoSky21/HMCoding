@@ -200,7 +200,7 @@ class DCC2023Model(CompressionModel):
         self.conv2 = conv(128, 256, 5, 2)
 
         self.gs_a = nn.Sequential(
-            conv(Cs + 3, N, 5, 1),
+            conv(Cs + 4, N, 5, 1),
             GDN(N),
             conv(N, N, 5, 1),
             GDN(N),
@@ -284,7 +284,7 @@ class DCC2023Model(CompressionModel):
         self.M2 = M2
         self.M = M
 
-    def forward(self, x, x_lr):
+    def forward(self, x, x_lr, x_lr_edge):
         # baselayer
         img_size = x.size(2)
         f0 = self.modules0(x)  # 32*256*256
@@ -302,7 +302,7 @@ class DCC2023Model(CompressionModel):
         s = self.modules12(f11)  # 256*32*32   **
 
         # s = self.yolov3_front(x)
-        f = torch.cat([s, x_lr], dim=1)
+        f = torch.cat([s, x_lr, x_lr_edge], dim=1)
         y1 = self.gs_a(f)
         z1 = self.hs_a(torch.abs(y1))
         z1_hat, z1_likelihoods = self.entropy_bottleneck(z1)
