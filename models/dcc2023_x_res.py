@@ -116,7 +116,7 @@ class DCC2023Model(CompressionModel):
         )
 
         self.gx_s = nn.Sequential(
-            deconv(M, N),
+            deconv(M2, N),
             GDN(N, inverse=True),
             deconv(N, N),
             GDN(N, inverse=True),
@@ -176,7 +176,8 @@ class DCC2023Model(CompressionModel):
         z2_hat, z2_likelihoods = self.entropy_bottleneck(z2)
         scales_hat_z2 = self.hx_s(z2_hat)
         y2_hat, y2_likelihoods = self.gaussian_conditional(y2, scales_hat_z2)
-        x_hat = self.gx_s(torch.cat([y2_hat, y1_hat], dim=1))
+        x_hat = self.gx_s(y2_hat) + res
+        # x_hat = self.gx_s(torch.cat([y2_hat, y1_hat], dim=1))
 
         return {
             "x_hat": x_hat,

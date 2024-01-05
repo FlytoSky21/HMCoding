@@ -18,8 +18,6 @@ from compressai.entropy_models import EntropyBottleneck, GaussianConditional
 from compressai.layers import GDN, MaskedConv2d
 # from models.yolov3_models import load_model
 from pytorchyolo import detect, my_models
-from models.stf.layers import SFTLayer
-
 
 def conv(in_channels, out_channels, kernel_size=5, stride=2):
     return nn.Conv2d(
@@ -85,6 +83,8 @@ class DCC2023Model(CompressionModel):
         yolov3_back_dict.update(new_yolov3_back_dict)
         self.yolov3_back.load_state_dict(yolov3_back_dict)
 
+        # self.yolov3_front = torch.nn.Sequential(*list(self.yolov3.module_list)[:13])
+        # self.yolov3_back = torch.nn.Sequential(*list(self.yolov3.module_list)[13:])
 
         # Freeze the parameters of yolo_front and yolo_back
         for param in self.yolov3_front.parameters():
@@ -188,13 +188,6 @@ class DCC2023Model(CompressionModel):
         load_pretrained_model(self.modules12, yolov3_front_pretrained, 15)
         freeze_para(self.modules12)
 
-        self.sft0 = SFTLayer(128, 192)
-        self.sft1 = SFTLayer(256, 192)
-        self.conv0 = conv(3, 64, 5, 2)
-        self.conv1 = conv(64, 128, 5, 2)
-
-        self.conv2 = conv(128, 256, 5, 2)
-
         self.gs_a = nn.Sequential(
             conv(Cs + 3, N, 5, 1),
             GDN(N),
@@ -223,45 +216,6 @@ class DCC2023Model(CompressionModel):
             deconv(N, N),
             nn.ReLU(inplace=True),
             conv(N, M1, stride=1, kernel_size=3),
-            nn.ReLU(inplace=True),
-        )
-        self.gx_s = nn.Sequential(
-            deconv(M, N),
-            GDN(N, inverse=True),
-            deconv(N, N),
-            GDN(N, inverse=True),
-            deconv(N, N),
-            GDN(N, inverse=True),
-            deconv(N, 3),
-        )
-        self.gx_a = nn.Sequential(
-            conv(3, N),
-            GDN(N),
-            conv(N, N),
-            GDN(N),
-            conv(N, N),
-            GDN(N),
-            conv(N, M2),
-        )
-        self.gx_a0 = nn.Sequential(conv(3, N), GDN(N))
-        self.gx_a1 = nn.Sequential(conv(N, N), GDN(N))
-        self.gx_a2 = nn.Sequential(conv(N, N), GDN(N))
-        self.gx_a3 = nn.Sequential(conv(N, M2))
-
-        self.hx_a = nn.Sequential(
-            conv(M2, N, stride=1, kernel_size=3),
-            nn.ReLU(inplace=True),
-            conv(N, N),
-            nn.ReLU(inplace=True),
-            conv(N, N),
-        )
-
-        self.hx_s = nn.Sequential(
-            deconv(N, N),
-            nn.ReLU(inplace=True),
-            deconv(N, N),
-            nn.ReLU(inplace=True),
-            conv(N, M2, stride=1, kernel_size=3),
             nn.ReLU(inplace=True),
         )
         self.gaussian_conditional = GaussianConditional(None)
@@ -296,27 +250,11 @@ class DCC2023Model(CompressionModel):
         scales_hat_z1 = self.hs_s(z1_hat)
         y1_hat, y1_likelihoods = self.gaussian_conditional(y1, scales_hat_z1)
         s_hat = self.gs_s(y1_hat)
-        t_hat = self.yolov3_back(s_hat, img_size)
-
-        # enhance layer
-        # y2 = self.gx_a(x)
-        # y_x_0 = self.gx_a0(x)  # 192*128*128
-        # y_x_1 = self.gx_a1(y_x_0)  # 192*64*64
-        # y_x_1_sft = self.sft0((y_x_1, f5))
-        # y_x_2 = self.gx_a2(y_x_1_sft)  # 192*32*32
-        # y_x_2_sft = self.sft1((y_x_2, s))
-        # y2 = self.gx_a3(y_x_2_sft)  # 128*16*16
-        # z2 = self.hx_a(torch.abs(y2))
-        # z2_hat, z2_likelihoods = self.entropy_bottleneck(z2)
-        # scales_hat_z2 = self.hx_s(z2_hat)
-        # y2_hat, y2_likelihoods = self.gaussian_conditional(y2, scales_hat_z2)
-        # x_hat = self.gx_s(torch.cat([y2_hat, y1_hat], dim=1))
+        # t_hat = self.yolov3_back(s_hat, img_size)
 
         return {
-            # "x_hat": x_hat,
             "base_likelihoods": {"y1": y1_likelihoods, "z1": z1_likelihoods},
-            # "enhance_likelihoods": {"y2": y2_likelihoods, "z2": z2_likelihoods},
             "s": s,
             "s_hat": s_hat,
-            "t_hat": t_hat,
+            # "t_hat":t_hat
         }

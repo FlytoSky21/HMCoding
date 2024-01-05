@@ -36,10 +36,10 @@ class SFTLayerNoBias(nn.Module):
         self.SFT_scale_conv1 = nn.Conv2d(in_ch, in_ch, 1)
         self.SFT_scale_conv2 = nn.Conv2d(in_ch, in_ch, 1)
         self.SFT_scale_conv3 = nn.Conv2d(in_ch, out_ch, 1)
-        self.SFT_shift_conv0 = nn.Conv2d(in_ch, in_ch, 1)
-        self.SFT_shift_conv1 = nn.Conv2d(in_ch, in_ch, 1)
-        self.SFT_shift_conv2 = nn.Conv2d(in_ch, in_ch, 1)
-        self.SFT_shift_conv3 = nn.Conv2d(in_ch, out_ch, 1)
+        # self.SFT_shift_conv0 = nn.Conv2d(in_ch, in_ch, 1)
+        # self.SFT_shift_conv1 = nn.Conv2d(in_ch, in_ch, 1)
+        # self.SFT_shift_conv2 = nn.Conv2d(in_ch, in_ch, 1)
+        # self.SFT_shift_conv3 = nn.Conv2d(in_ch, out_ch, 1)
 
     def forward(self, x):
         # x[0]: fea; x[1]: cond

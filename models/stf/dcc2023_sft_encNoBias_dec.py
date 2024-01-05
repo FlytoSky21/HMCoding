@@ -18,7 +18,8 @@ from compressai.entropy_models import EntropyBottleneck, GaussianConditional
 from compressai.layers import GDN, MaskedConv2d
 # from models.yolov3_models import load_model
 from pytorchyolo import detect, my_models
-from models.stf.layers_conv4 import SFTLayer, SFTLayerNoBias
+# from models.stf.layers_conv4 import SFTLayer, SFTLayerNoBias
+from models.stf.layers import SFTLayer, SFTLayerNoBias
 
 
 def conv(in_channels, out_channels, kernel_size=5, stride=2):
