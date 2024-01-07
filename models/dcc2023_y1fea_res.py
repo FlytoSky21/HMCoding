@@ -76,7 +76,7 @@ class DCC2023Model(CompressionModel):
             param.requires_grad = False
 
         self.gs_a = nn.Sequential(
-            conv(Cs, N, 5, 1),
+            conv(Cs+3, N, 5, 1),
             GDN(N),
             conv(N, N, 5, 1),
             GDN(N),
@@ -148,7 +148,9 @@ class DCC2023Model(CompressionModel):
             conv(N, M2, stride=1, kernel_size=3),
             nn.ReLU(inplace=True),
         )
+        self.entropy_bottleneck_x = EntropyBottleneck(N)
         self.gaussian_conditional = GaussianConditional(None)
+        self.gaussian_conditional_x = GaussianConditional(None)
         self.Cs = Cs
         self.N = N
         self.M1 = M1
@@ -159,8 +161,8 @@ class DCC2023Model(CompressionModel):
         # baselayer
         img_size = x.size(2)
         s = self.yolov3_front(x)
-        # f = torch.cat([s, x_lr], dim=1)
-        y1 = self.gs_a(s)
+        f = torch.cat([s, x_lr], dim=1)
+        y1 = self.gs_a(f)
         z1 = self.hs_a(torch.abs(y1))
         z1_hat, z1_likelihoods = self.entropy_bottleneck(z1)
         scales_hat_z1 = self.hs_s(z1_hat)
@@ -173,9 +175,9 @@ class DCC2023Model(CompressionModel):
         y2 = self.gx_a(x)
         y2 = y2 - res
         z2 = self.hx_a(torch.abs(y2))
-        z2_hat, z2_likelihoods = self.entropy_bottleneck(z2)
+        z2_hat, z2_likelihoods = self.entropy_bottleneck_x(z2)
         scales_hat_z2 = self.hx_s(z2_hat)
-        y2_hat, y2_likelihoods = self.gaussian_conditional(y2, scales_hat_z2)
+        y2_hat, y2_likelihoods = self.gaussian_conditional_x(y2, scales_hat_z2)
         x_hat = self.gx_s(y2_hat + res)
         # x_hat = self.gx_s(torch.cat([y2_hat, y1_hat], dim=1))
 
