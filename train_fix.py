@@ -23,8 +23,8 @@ from compressai.zoo import models
 from pytorch_msssim import ms_ssim
 # from models.dcc2023_x_res import DCC2023Model
 # from models.dcc2023 import DCC2023Model
-# from models.dcc2023_y1fea_res import DCC2023Model
-from models.stf.dcc2023_sft_encNoBias_dec import DCC2023Model
+from models.dcc2023_y1fea_res import DCC2023Model
+# from models.stf.dcc2023_sft_encNoBias_dec import DCC2023Model
 from torch.utils.tensorboard import SummaryWriter
 import os
 
@@ -262,7 +262,7 @@ def parse_args(argv):
         "-d", "--dataset", type=str, default='/home/adminroot/taofei/dataset/flicker', help="Training dataset"
     )
     parser.add_argument("--weight_path",
-                        default="/home/adminroot/taofei/DCC2023fuxian/result/base_traing/flicker/ReduceLROnPlateau/dcc_sft/0.063/checkpoint_latest.pth.tar",
+                        default="/home/adminroot/taofei/DCC2023fuxian/result/base_traing/flicker/ReduceLROnPlateau/dcc_nolr/0.013/checkpoint_latest.pth.tar",
                         type=str, help="base weiight-path")
     parser.add_argument(
         "-e",
