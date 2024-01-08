@@ -18,8 +18,8 @@ from compressai.entropy_models import EntropyBottleneck, GaussianConditional
 from compressai.layers import GDN, MaskedConv2d
 # from models.yolov3_models import load_model
 from pytorchyolo import detect, my_models
-# from models.stf.layers_conv4 import SFTLayer, SFTLayerNoBias
-from models.stf.layers import SFTLayer, SFTLayerNoBias
+from models.stf.layers_conv4 import SFTLayer, SFTLayerNoBias
+# from models.stf.layers import SFTLayer, SFTLayerNoBias
 
 
 def conv(in_channels, out_channels, kernel_size=5, stride=2):
@@ -195,10 +195,6 @@ class DCC2023Model(CompressionModel):
         # self.sft1 = SFTLayer(256, 192)
         self.sft0 = SFTLayerNoBias(128, 192)
         self.sft1 = SFTLayerNoBias(256, 192)
-        self.conv0 = conv(3, 64, 5, 2)
-        self.conv1 = conv(64, 128, 5, 2)
-
-        self.conv2 = conv(128, 256, 5, 2)
 
         self.gs_a = nn.Sequential(
             conv(Cs + 3, N, 5, 1),
@@ -230,15 +226,6 @@ class DCC2023Model(CompressionModel):
             conv(N, M1, stride=1, kernel_size=3),
             nn.ReLU(inplace=True),
         )
-        # self.gx_s = nn.Sequential(
-        #     deconv(M, N),
-        #     GDN(N, inverse=True),
-        #     deconv(N, N),
-        #     GDN(N, inverse=True),
-        #     deconv(N, N),
-        #     GDN(N, inverse=True),
-        #     deconv(N, 3),
-        # )
         self.gx_s0 = nn.Sequential(deconv(M2, N), GDN(N, inverse=True))
         self.gx_s1 = nn.Sequential(
             deconv(N, N),
@@ -248,15 +235,6 @@ class DCC2023Model(CompressionModel):
             deconv(N, 3),
         )
         self.sft2 = SFTLayer(256, 192)
-        # self.gx_a = nn.Sequential(
-        #     conv(3, N),
-        #     GDN(N),
-        #     conv(N, N),
-        #     GDN(N),
-        #     conv(N, N),
-        #     GDN(N),
-        #     conv(N, M2),
-        # )
         self.gx_a0 = nn.Sequential(conv(3, N), GDN(N))
         self.gx_a1 = nn.Sequential(conv(N, N), GDN(N))
         self.gx_a2 = nn.Sequential(conv(N, N), GDN(N))
@@ -278,7 +256,9 @@ class DCC2023Model(CompressionModel):
             conv(N, M2, stride=1, kernel_size=3),
             nn.ReLU(inplace=True),
         )
+        self.entropy_bottleneck_x = EntropyBottleneck(N)
         self.gaussian_conditional = GaussianConditional(None)
+        self.gaussian_conditional_x = GaussianConditional(None)
         self.Cs = Cs
         self.N = N
         self.M1 = M1
@@ -321,9 +301,9 @@ class DCC2023Model(CompressionModel):
         y_x_2_sft = self.sft1((y_x_2, s))
         y2 = self.gx_a3(y_x_2_sft)  # 128*16*16
         z2 = self.hx_a(torch.abs(y2))
-        z2_hat, z2_likelihoods = self.entropy_bottleneck(z2)
+        z2_hat, z2_likelihoods = self.entropy_bottleneck_x(z2)
         scales_hat_z2 = self.hx_s(z2_hat)
-        y2_hat, y2_likelihoods = self.gaussian_conditional(y2, scales_hat_z2)
+        y2_hat, y2_likelihoods = self.gaussian_conditional_x(y2, scales_hat_z2)
         x_hat_1 = self.gx_s0(y2_hat)
         x_sft2 = self.sft2((x_hat_1, s_hat))
         x_hat = self.gx_s1(x_sft2)

@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
 # @Time: 2023/11/19 18:02
 # @Author: TaoFei
-# @FileName: dcc2023_sft.py
+# @FileName: dcc2023.py
 # @Software: PyCharm
 
 from compressai.models import CompressionModel
@@ -76,7 +76,7 @@ class DCC2023Model(CompressionModel):
             param.requires_grad = False
 
         self.gs_a = nn.Sequential(
-            conv(Cs + 3, N, 5, 1),
+            conv(Cs, N, 5, 1),
             GDN(N),
             conv(N, N, 5, 1),
             GDN(N),
@@ -105,53 +105,7 @@ class DCC2023Model(CompressionModel):
             conv(N, M1, stride=1, kernel_size=3),
             nn.ReLU(inplace=True),
         )
-        self.gres_s = nn.Sequential(
-            deconv(M1, N),
-            GDN(N, inverse=True),
-            deconv(N, N),
-            GDN(N, inverse=True),
-            deconv(N, N),
-            GDN(N, inverse=True),
-            deconv(N, 3),
-        )
-
-        self.gx_s = nn.Sequential(
-            deconv(M2, N),
-            GDN(N, inverse=True),
-            deconv(N, N),
-            GDN(N, inverse=True),
-            deconv(N, N),
-            GDN(N, inverse=True),
-            deconv(N, 3),
-        )
-        self.gx_a = nn.Sequential(
-            conv(3, N),
-            GDN(N),
-            conv(N, N),
-            GDN(N),
-            conv(N, N),
-            GDN(N),
-            conv(N, M2),
-        )
-        self.hx_a = nn.Sequential(
-            conv(M2, N, stride=1, kernel_size=3),
-            nn.ReLU(inplace=True),
-            conv(N, N),
-            nn.ReLU(inplace=True),
-            conv(N, N),
-        )
-
-        self.hx_s = nn.Sequential(
-            deconv(N, N),
-            nn.ReLU(inplace=True),
-            deconv(N, N),
-            nn.ReLU(inplace=True),
-            conv(N, M2, stride=1, kernel_size=3),
-            nn.ReLU(inplace=True),
-        )
-        self.entropy_bottleneck_x = EntropyBottleneck(N)
         self.gaussian_conditional = GaussianConditional(None)
-        self.gaussian_conditional_x = GaussianConditional(None)
         self.Cs = Cs
         self.N = N
         self.M1 = M1
@@ -162,8 +116,8 @@ class DCC2023Model(CompressionModel):
         # baselayer
         img_size = x.size(2)
         s = self.yolov3_front(x)
-        f = torch.cat([s, x_lr], dim=1)
-        y1 = self.gs_a(f)
+        # f = torch.cat([s, x_lr], dim=1)
+        y1 = self.gs_a(s)
         z1 = self.hs_a(torch.abs(y1))
         z1_hat, z1_likelihoods = self.entropy_bottleneck(z1)
         scales_hat_z1 = self.hs_s(z1_hat)
@@ -171,21 +125,10 @@ class DCC2023Model(CompressionModel):
         s_hat = self.gs_s(y1_hat)
         # t_hat = self.yolov3_back(s_hat, img_size)
 
-        # enhance layer
-        res = self.gres_s(y1_hat)
-        y2 = self.gx_a(x - res)
-        z2 = self.hx_a(torch.abs(y2))
-        z2_hat, z2_likelihoods = self.entropy_bottleneck_x(z2)
-        scales_hat_z2 = self.hx_s(z2_hat)
-        y2_hat, y2_likelihoods = self.gaussian_conditional_x(y2, scales_hat_z2)
-        x_hat = self.gx_s(y2_hat) + res
-        # x_hat = self.gx_s(torch.cat([y2_hat, y1_hat], dim=1))
-
         return {
-            "x_hat": x_hat,
             "base_likelihoods": {"y1": y1_likelihoods, "z1": z1_likelihoods},
-            "enhance_likelihoods": {"y2": y2_likelihoods, "z2": z2_likelihoods},
+            # "enhance_likelihoods": {"y2": y2_likelihoods, "z2": z2_likelihoods},
             "s": s,
             "s_hat": s_hat,
-            #            "t_hat": t_hat,
+            # "t_hat": t_hat,
         }
