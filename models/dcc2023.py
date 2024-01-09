@@ -105,15 +105,6 @@ class DCC2023Model(CompressionModel):
             conv(N, M1, stride=1, kernel_size=3),
             nn.ReLU(inplace=True),
         )
-        self.gres_s = nn.Sequential(
-            deconv(M1, N),
-            GDN(N, inverse=True),
-            deconv(N, N),
-            GDN(N, inverse=True),
-            deconv(N, N),
-            GDN(N, inverse=True),
-            deconv(N, 3),
-        )
 
         self.gx_s = nn.Sequential(
             deconv(M, N),
@@ -170,8 +161,7 @@ class DCC2023Model(CompressionModel):
         # t_hat = self.yolov3_back(s_hat, img_size)
 
         # enhance layer
-        res = self.gres_s(y1_hat)
-        y2 = self.gx_a(x - res)
+        y2 = self.gx_a(x)
         z2 = self.hx_a(torch.abs(y2))
         z2_hat, z2_likelihoods = self.entropy_bottleneck(z2)
         scales_hat_z2 = self.hx_s(z2_hat)
